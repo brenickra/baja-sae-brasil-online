@@ -10,6 +10,7 @@ use Baja\Session;
 
 $filas = Fila::getFilasUsuario(Session::getCurrentUser()->getUsername());
 
+var_dump(Session::getCurrentUser()->getUsername());
 
 foreach($filas as $k=>$f){
 

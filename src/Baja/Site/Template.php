@@ -12,27 +12,54 @@ class Template
         <html>
         <head><?php self::printGA(); ?>
             <link rel="manifest" href="/manifest.json">
-            <script src="https://cdn.onesignal.com/sdks/OneSignalSDK.js" async></script>
+            <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
             <script>
-                var OneSignal = window.OneSignal || [];
-                OneSignal.push(["init", {
-                    appId: "f4b8f501-88bb-49fe-b209-712ae98da3e2",
-                    autoRegister: true,
-                    notifyButton: {
-                        enable: false /* Set to false to hide */
-                    },
-                    welcomeNotification: {
-                        "title": "Baja SAE Brasil Online",
-                        "message": "Obrigado por se inscrever!",
-                        "url": "<?= EventoQuery::getCurrentEvent()->getEventoId() ?>/notificacoes.php"
-                    },
-                    persistNotification: false,
-                    safari_web_id: "web.onesignal.auto.246fdfe2-a404-4d40-aa8a-d2b211d431d5"
-                }]);
                 var tagPrefix = '<?= EventoQuery::getCurrentEvent()->getEventoId() ?>_';
-                OneSignal.push(function() {
-                    OneSignal.on('subscriptionChange', function (isSubscribed) {
-                        if (isSubscribed) OneSignal.push(["sendTag", tagPrefix + "psa", 1])
+                window.OneSignalDeferred = window.OneSignalDeferred || [];
+                OneSignalDeferred.push(async function(OneSignal) {
+                    console.log("OneSignal context received, starting init...");
+
+                    // Check service worker support
+                    if ('serviceWorker' in navigator) {
+                        console.log("Service Worker is supported");
+
+                        // Check if already registered
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        console.log("Existing service worker registrations:", registrations.length);
+
+                        // Try to register manually if needed
+                        if (registrations.length === 0) {
+                            console.log("No service workers found, attempting to register...");
+                            try {
+                                const registration = await navigator.serviceWorker.register('/OneSignalSDKWorker.js', {
+                                    scope: '/'
+                                });
+                                console.log("Service worker registered successfully:", registration);
+                            } catch (err) {
+                                console.error("Service worker registration failed:", err);
+                            }
+                        }
+                    } else {
+                        console.error("Service Worker is not supported in this browser!");
+                    }
+
+                    await OneSignal.init({
+                        appId: "2d1b50b2-362f-49c1-a854-3c8c7e0db587",
+                        serviceWorkerPath: "/OneSignalSDKWorker.js",
+                        allowLocalhostAsSecureOrigin: true,
+                        notifyButton: { enable: false }
+                    });
+                    console.log("OneSignal initialized");
+
+                    // Set up event listener
+                    OneSignal.User.PushSubscription.addEventListener('change', function (subscription) {
+                        console.log("Template: subscriptionChange", subscription);
+                        var optedIn = subscription.current ? subscription.current.optedIn : false;
+                        if (optedIn) {
+                            OneSignal.User.addTag({ [tagPrefix + "psa"]: "1" });
+                        } else {
+                            OneSignal.User.deleteTag(tagPrefix + "psa");
+                        }
                     });
                 });
             </script>

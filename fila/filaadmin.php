@@ -6,6 +6,7 @@ use Baja\Model\EventoQuery;
 use Baja\Model\FilaQuery;
 use Baja\Model\SenhaQuery;
 use Baja\Model\EquipeQuery;
+use Baja\Site\OneSignalClient;
 
 use Baja\Session;
 
@@ -40,6 +41,14 @@ foreach($filas_usuario as $fu) {
 
 if (!$permissao) {
     header("Location: filapicker.php");
+}
+
+// Handle push notification requests
+if (@$_REQUEST['act'] == 'push') {
+    header('Content-Type: application/json');
+    $response = OneSignalClient::sendMessage(@$_POST['heading'], @$_POST['msg'], "/", @$_POST['filter']);
+    echo json_encode(['success' => true, 'response' => $response]);
+    exit;
 }
 
 try {
@@ -970,19 +979,24 @@ Template::printHeader('Fila '.$fila->getNome());
             }
 
             function enviaNotificacao(equipe,titulo,msg) {
-                let url='https://juiz.bajasaebrasil.net/<?= $evento_id ?>/admin.php?act=push&api=s45gh$3d56';
+                let url='filaadmin.php?evento=<?= $evento_id ?>&fila=<?= $fila_id ?>&act=push';
                 let xhr = new XMLHttpRequest();
-                
+
                 let params = 'heading='+encodeURIComponent(titulo)+'&msg='+encodeURIComponent(msg)+'&filter='+equipe.toString()+'&submit=Enviar';
+
+                console.log('Sending notification:', {equipe, titulo, msg, url, params});
 
                 xhr.open('POST', url, true);
 
                 xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
                 xhr.onreadystatechange = function() {
-                if(xhr.readyState == 4 && xhr.status == 200) {
-                    console.log(xhr.responseText);
-                }
+                    if(xhr.readyState == 4) {
+                        console.log('Notification response:', xhr.status, xhr.responseText);
+                        if (xhr.status != 200) {
+                            console.error('Notification failed:', xhr.status, xhr.responseText);
+                        }
+                    }
                 }
 
                 xhr.send(params);
