@@ -10,6 +10,12 @@ use Baja\Model\User;
 
 $resultado = ResultadoQuery::create()->filterByEventoId(EventoQuery::getCurrentEvent()->getEventoId())->findPk($_REQUEST['id']);
 if (!$resultado) header("Location: index.php");
+if (@$resultado->getColunas()->type == "html") {
+    Template::printHeader($resultado->getNome());
+    echo @$resultado->getColunas()->html;
+    Template::printFooter();
+    exit();
+}
 $colunas = (array)$resultado->getColunas()->colunas;
 if (@$resultado->getColunas()->type == "tournament") header("Location: torneio.php?id=".$_REQUEST['id']);
 $pos = @$resultado->getColunas()->pos;
