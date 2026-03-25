@@ -10,6 +10,17 @@ use Baja\Model\User;
 
 $resultado = ResultadoQuery::create()->filterByEventoId(EventoQuery::getCurrentEvent()->getEventoId())->findPk($_REQUEST['id']);
 if (!$resultado) header("Location: index.php");
+$private = @$resultado->getColunas()->private;
+$private_authorized_users = (array)@$resultado->getColunas()->authorized_users;
+$current_user = $user->data["username"];
+$current_baja_user = $current_user ? \Baja\Model\UserQuery::create()->findOneByUsername($current_user) : null;
+$is_admin = $current_baja_user && $current_baja_user->hasPermission('admin');
+$user_private_authorized = in_array($current_user, $private_authorized_users, true);
+
+if ($private && !$is_admin && !$user_private_authorized) {
+    header("Location: index.php");
+    exit();
+}
 $colunas = (array)$resultado->getColunas()->colunas;
 if (@$resultado->getColunas()->type == "tournament") header("Location: torneio.php?id=".$_REQUEST['id']);
 $pos = @$resultado->getColunas()->pos;
